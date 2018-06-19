@@ -1,9 +1,9 @@
 # Multiownable
 
-[![Build Status](https://travis-ci.org/bitclave/Multiownable.svg?branch=master)](https://travis-ci.org/bitclave/Multiownable)
-[![Coverage Status](https://coveralls.io/repos/github/bitclave/Multiownable/badge.svg)](https://coveralls.io/github/bitclave/Multiownable)
+[![Build Status](https://travis-ci.org/k06a/Multiownable.svg?branch=master)](https://travis-ci.org/k06a/Multiownable)
+[![Coverage Status](https://coveralls.io/repos/github/k06a/Multiownable/badge.svg)](https://coveralls.io/github/k06a/Multiownable)
 
-BitClave implementation of Multiownable contract as improvement to OpenZeppelin Ownable contract
+Simplest implementation of Multiownable contract as improvement to OpenZeppelin Ownable contract
 
 # Installation
 

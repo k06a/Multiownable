@@ -1,7 +1,7 @@
 {
   "name": "Multiownable",
   "version": "1.0.0",
-  "description": "Solidity Contracts for the BitClave CAT Token",
+  "description": "Solidity Contracts for the Multiownable functionality",
   "main": "y",
   "directories": {
     "test": "test"
@@ -47,17 +47,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bitclave/crowdsale.git"
+    "url": "git+https://github.com/k06a/Multiownable.git"
   },
   "keywords": [
-    "bitclave",
     "solidity",
     "truffle"
   ],
-  "author": "BitClave",
+  "author": "Anton Bukov",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/bitclave/Multiownable/issues"
+    "url": "https://github.com/k06a/Multiownable/issues"
   },
-  "homepage": "https://github.com/bitclave/Multiownable#readme"
+  "homepage": "https://github.com/k06a/Multiownable#readme"
 }
