@@ -7,7 +7,7 @@ contract Multiownable {
 
     using Set for Set.Data;
 
-    uint256 public constant MAX_PENDING_OPERATIONS_PER_OWNER = 20;
+    uint256 public constant MAX_PENDING_OPERATIONS_PER_OWNER = 50;
 
     // VARIABLES
 
@@ -17,6 +17,7 @@ contract Multiownable {
     Set.Data internal operations;
     mapping(uint256 => Set.Data) internal operationsByOwnerId;
     mapping(address => uint256) public ownerIds;
+    mapping(uint256 => address) public ownerById;
     mapping(bytes32 => uint256) public dataHashGeneration;
     mapping(bytes32 => uint256) public votesCountByOperation;
     mapping(bytes32 => bytes) public dataByOperation;
@@ -165,10 +166,10 @@ contract Multiownable {
 
     // PRIVATE METHODS
 
-    function _deleteOperation(bytes32 operation) private {
+    function _deleteOperation(bytes32 operation, bool done) private {
         operations.remove(operation);
+        votesCountByOperation[operation] = done ? uint256(-1) : 0;
         delete dataByOperation[operation];
-        delete votesCountByOperation[operation];
     }
 
     // INTERNAL METHODS
@@ -178,7 +179,7 @@ contract Multiownable {
      */
     function _voteAndCheck(uint howMany) internal returns(bool) {
         if (insideCallSender == msg.sender) {
-            require(howMany <= insideCallCount, "checkHowManyOwners: nested owners modifier check require more owners");
+            require(howMany <= insideCallCount, "_voteAndCheck: nested owners modifier check require more owners");
             return true;
         }
 
@@ -187,11 +188,15 @@ contract Multiownable {
         bytes32 calldataHash = keccak256(msg.data);
         bytes32 operation = bytes32(uint256(calldataHash) + dataHashGeneration[calldataHash]);
 
+        if (operationsByOwnerId[ownerId].length() == MAX_PENDING_OPERATIONS_PER_OWNER) {
+            cleanFinishedOperations(ownerId);
+        }
+
         uint operationVotesCount = votesCountByOperation[operation] + 1;
         votesCountByOperation[operation] = operationVotesCount;
-        require(operationsByOwnerId[ownerId].add(operation), "checkHowManyOwners: owner already voted for the operation");
-        require(operationsByOwnerId[ownerId].length() <= MAX_PENDING_OPERATIONS_PER_OWNER,
-            "checkHowManyOwners: owner already have MAX allowed pending operations");
+        require(operationsByOwnerId[ownerId].add(operation), "_voteAndCheck: owner already voted for the operation");
+        require(operationsByOwnerId[ownerId].length() <= MAX_PENDING_OPERATIONS_PER_OWNER, "_voteAndCheck: owner exceeded number of pending operations");
+        
         if (operationVotesCount == 1) {
             operations.add(operation);
             dataByOperation[operation] = msg.data;
@@ -199,9 +204,13 @@ contract Multiownable {
         }
         emit OperationUpvoted(operation, operationVotesCount, howMany, owners.length(), msg.sender);
 
+        return _checkVotes(howMany, operation, calldataHash);
+    }
+
+    function _checkVotes(uint howMany, bytes32 operation, bytes32 calldataHash) internal returns(bool) {
         // If enough owners confirmed the same operation
         if (votesCountByOperation[operation] >= howMany) {
-            _deleteOperation(operation);
+            _deleteOperation(operation, true);
             dataHashGeneration[calldataHash]++;
             emit OperationPerformed(operation, howMany, owners.length(), msg.sender);
             return true;
@@ -210,35 +219,39 @@ contract Multiownable {
         return false;
     }
 
-    function _cancelOperation(bytes32 operation, address theOwner) internal {
-        uint256 ownerId = ownerIds[theOwner];
-
+    function _cancelOperation(bytes32 operation, uint256 ownerId) internal {
         require(operationsByOwnerId[ownerId].remove(operation), "_cancelOperation: operation not found for this user");
 
         uint operationVotesCount = votesCountByOperation[operation] - 1;
-        votesCountByOperation[operation] = operationVotesCount;
-        emit OperationDownvoted(operation, operationVotesCount, owners.length(), msg.sender);
-        if (operationVotesCount == 0) {
-            _deleteOperation(operation);
-            emit OperationCancelled(operation, msg.sender);
+        if (operationVotesCount != uint256(-2)) {
+            votesCountByOperation[operation] = operationVotesCount;
+            emit OperationDownvoted(operation, operationVotesCount, owners.length(), msg.sender);
+            if (operationVotesCount == 0) {
+                _deleteOperation(operation, false);
+                emit OperationCancelled(operation, msg.sender);
+            }
         }
     }
 
     function _addOwner(address newOwner) internal {
         require(newOwner != address(0), "_addOwner: owners array contains zero");
         require(owners.add(bytes32(newOwner)), "_addOwner: owners array contains duplicates");
-        ownerIds[newOwner] = nextOwnerId++;
-        howManyOwnersDecide += 1;
+        ownerIds[newOwner] = nextOwnerId;
+        ownerById[nextOwnerId] = newOwner;
+        nextOwnerId += 1;
     }
 
     function _removeOwner(address theOwner) internal {
         require(owners.remove(bytes32(theOwner)), "_removeOwner: theOwner do not exist");
-        howManyOwnersDecide -= ((howManyOwnersDecide > 1) ? 1 : 0);
         uint256 ownerId = ownerIds[theOwner];
+
         for (uint i = operationsByOwnerId[ownerId].length(); i > 0; i--) {
             bytes32 operation = operationsByOwnerId[ownerId].at(i - 1);
-            _cancelOperation(operation, theOwner);
+            _cancelOperation(operation, ownerId);
         }
+
+        delete ownerById[ownerId];
+        delete ownerIds[theOwner];
         emit OwnerRemoved(theOwner, howManyOwnersDecide);
     }
 
@@ -255,7 +268,7 @@ contract Multiownable {
     * @param operation defines which operation to cancel
     */
     function cancelOperation(bytes32 operation) public onlyAnyOwner {
-        return _cancelOperation(operation, msg.sender);
+        return _cancelOperation(operation, ownerIds[msg.sender]);
     }
 
     /**
@@ -272,6 +285,9 @@ contract Multiownable {
     function resignOwnership() public onlyAnyOwner {
         require(owners.length() > 1);
         _removeOwner(msg.sender);
+        if (howManyOwnersDecide > 1) {
+            howManyOwnersDecide -= 1;
+        }
     }
 
     /**
@@ -319,6 +335,16 @@ contract Multiownable {
             _removeOwner(theOwners[i]);
         }
         _setHowManyOwnersDecide(howMany);
+    }
+
+    function cleanFinishedOperations(uint256 ownerId) public {
+        bool isNotAnOwnerAnymore = (ownerById[ownerId] == address(0));
+        for (uint i = operationsByOwnerId[ownerId].length(); i > 0; i--) {
+            bytes32 operation = operationsByOwnerId[ownerId].at(i - 1);
+            if (isNotAnOwnerAnymore || votesCountByOperation[operation] == uint256(-1)) {
+                _cancelOperation(operation, ownerId);
+            }
+        }
     }
 
 }
