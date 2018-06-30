@@ -11,6 +11,7 @@ contract Multiownable {
     bytes32[] public allOperations;
     address internal insideCallSender;
     uint256 internal insideCallCount;
+    mapping(uint256 => bool) internal doneIds;
 
     // Reverse lookup tables for owners and allOperations
     mapping(address => uint) public ownersIndices; // Starts from 1
@@ -68,6 +69,25 @@ contract Multiownable {
     */
     modifier onlyManyOwners {
         if (checkHowManyOwners(howManyOwnersDecide)) {
+            bool update = (insideCallSender == address(0));
+            if (update) {
+                insideCallSender = msg.sender;
+                insideCallCount = howManyOwnersDecide;
+            }
+            _;
+            if (update) {
+                insideCallSender = address(0);
+                insideCallCount = 0;
+            }
+        }
+    }
+
+    /**
+    * @dev Allows to perform method only after many owners call it with the same arguments
+    */
+    modifier onlyManyOwnersWithID(uint256 id) {
+        if ((insideCallSender != address(0) || !doneIds[id]) && checkHowManyOwners(howManyOwnersDecide)) {
+            doneIds[id] = true;
             bool update = (insideCallSender == address(0));
             if (update) {
                 insideCallSender = msg.sender;
@@ -141,7 +161,7 @@ contract Multiownable {
 
         uint ownerIndex = ownersIndices[msg.sender] - 1;
         require(ownerIndex < owners.length, "checkHowManyOwners: msg.sender is not an owner");
-        bytes32 operation = keccak256(msg.data, ownersGeneration);
+        bytes32 operation = keccak256(abi.encodePacked(msg.data, ownersGeneration));
 
         require((votesMaskByOperation[operation] & (2 ** ownerIndex)) == 0, "checkHowManyOwners: owner already voted for the operation");
         votesMaskByOperation[operation] |= (2 ** ownerIndex);
