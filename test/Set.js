@@ -5,7 +5,6 @@ require('chai')
     .use(require('chai-bignumber')(web3.BigNumber))
     .should();
 
-const Set = artifacts.require('Set');
 const SetImpl = artifacts.require('SetImpl');
 
 const value1 = 'abcdefghijklmnopqrstuvwxyz123456';
@@ -13,10 +12,6 @@ const value2 = 'abcdefghijklmnopqrstuvwxyz123457';
 const value3 = 'abcdefghijklmnopqrstuvwxyz123458';
 
 contract('Set', function ([_, wallet1, wallet2, wallet3, wallet4, wallet5]) {
-    before(async function () {
-        SetImpl.link('Set', (await Set.new()).address);
-    });
-
     it('should init correctly', async function () {
         const set = await SetImpl.new();
 

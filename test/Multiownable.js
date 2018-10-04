@@ -6,16 +6,10 @@ require('chai')
     .use(require('chai-bignumber')(web3.BigNumber))
     .should();
 
-const Set = artifacts.require('Set.sol');
 const Multiownable = artifacts.require('Multiownable.sol');
 const MultiownableImpl = artifacts.require('./impl/MultiownableImpl.sol');
 
 contract('Multiownable', function ([_, wallet1, wallet2, wallet3, wallet4, wallet5]) {
-    before(async function () {
-        Multiownable.link('Set', (await Set.new()).address);
-        MultiownableImpl.link('Set', (await Set.new()).address);
-    });
-
     it('should be initialized', async function () {
         const obj = await Multiownable.new();
 

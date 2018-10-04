@@ -20,7 +20,7 @@ library Set {
         return s.lookup[item] != 0;
     }
 
-    function add(Data storage s, bytes32 item) public returns(bool) {
+    function add(Data storage s, bytes32 item) internal returns(bool) {
         if (s.lookup[item] > 0) {
             return false;
         }
@@ -28,7 +28,7 @@ library Set {
         return true;
     }
 
-    function remove(Data storage s, bytes32 item) public returns(bool) {
+    function remove(Data storage s, bytes32 item) internal returns(bool) {
         uint index = s.lookup[item];
         if (index == 0) {
             return false;

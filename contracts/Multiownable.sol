@@ -21,10 +21,10 @@ contract Multiownable {
     mapping(bytes32 => uint256) public dataHashGeneration;
     mapping(bytes32 => uint256) public votesCountByOperation;
     mapping(bytes32 => bytes) public dataByOperation;
-    
+
     address internal insideCallSender;
     uint256 internal insideCallCount;
-    
+
     // EVENTS
 
     event OwnersAdded(address[] newOwners, uint newHowManyOwnersDecide);
@@ -87,7 +87,7 @@ contract Multiownable {
     */
     modifier onlyAnyOwner {
         require(isOwner(msg.sender));
-        
+
         bool update = (insideCallSender == address(0));
         if (update) {
             insideCallSender = msg.sender;
@@ -196,7 +196,7 @@ contract Multiownable {
         votesCountByOperation[operation] = operationVotesCount;
         require(operationsByOwnerId[ownerId].add(operation), "_voteAndCheck: owner already voted for the operation");
         require(operationsByOwnerId[ownerId].length() <= MAX_PENDING_OPERATIONS_PER_OWNER, "_voteAndCheck: owner exceeded number of pending operations");
-        
+
         if (operationVotesCount == 1) {
             operations.add(operation);
             dataByOperation[operation] = msg.data;

@@ -7,15 +7,10 @@ require('chai')
     .use(require('chai-bignumber')(web3.BigNumber))
     .should();
 
-const Set = artifacts.require('Set.sol');
 const MultiAttackable = artifacts.require('./impl/MultiAttackable.sol');
 const MultiAttacker = artifacts.require('./impl/MultiAttacker.sol');
 
 contract('MultiAttack', function ([_, wallet1, wallet2, wallet3, wallet4, wallet5]) {
-    before(async function () {
-        MultiAttackable.link('Set', (await Set.new()).address);
-    });
-
     it('should handle reentracy attack', async function () {
         const victim = await MultiAttackable.new();
         const hacker = await MultiAttacker.new();
