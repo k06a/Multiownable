@@ -1,6 +1,4 @@
-// @flow
-import ether from './helpers/ether';
-import EVMRevert from './helpers/EVMRevert';
+const EVMRevert = require('./helpers/EVMRevert');
 
 require('chai')
     .use(require('chai-as-promised'))
@@ -16,13 +14,14 @@ contract('MultiAttack', function ([_, wallet1, wallet2, wallet3, wallet4, wallet
         const hacker = await MultiAttacker.new();
 
         // Prepare victim wallet
-        await victim.transferOwnership([wallet1, wallet2]);
-        await web3.eth.sendTransaction({ from: _, to: victim.address, value: ether(3) });
+        await victim.addOwners([wallet1, wallet2]);
+        await victim.resignOwnership({ from: _ });
+        await web3.eth.sendTransaction({ from: _, to: victim.address, value: web3.toWei(3, 'ether') });
 
         // Try reentrace attack
-        await victim.transferTo(hacker.address, ether(1), { from: wallet1 });
-        await victim.transferTo(hacker.address, ether(1), { from: wallet2 }).should.be.rejectedWith(EVMRevert);
+        await victim.transferTo(hacker.address, web3.toWei(1, 'ether'), { from: wallet1 });
+        await victim.transferTo(hacker.address, web3.toWei(1, 'ether'), { from: wallet2 }).should.be.rejectedWith(EVMRevert);
 
-        (await web3.eth.getBalance(victim.address)).should.be.bignumber.equal(ether(3));
+        (await web3.eth.getBalance(victim.address)).should.be.bignumber.equal(web3.toWei(3, 'ether'));
     });
 });
