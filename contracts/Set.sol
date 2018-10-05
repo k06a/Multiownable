@@ -1,8 +1,7 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 
 library Set {
-
     struct Data {
         bytes32[] items;
         mapping(bytes32 => uint) lookup;
@@ -42,5 +41,4 @@ library Set {
         delete s.lookup[item];
         return true;
     }
-
 }

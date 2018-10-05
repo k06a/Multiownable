@@ -9,6 +9,7 @@ contract MultiAttackable is Multiownable {
     }
 
     function transferTo(address to, uint256 amount) public onlyManyOwners {
+        // solium-disable-next-line security/no-call-value
         require(to.call.value(amount)());
         //to.transfer(amount);
     }
